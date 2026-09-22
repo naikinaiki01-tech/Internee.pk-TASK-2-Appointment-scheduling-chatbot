@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SereneBot — Appointment Scheduling Chatbot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EAF1EC;
+    --card:#FBFDFC;
+    --ink:#1E2A2C;
+    --ink-light:#5A6A66;
+    --line:#CFDED4;
+    --teal:#1F3A3D;
+    --coral:#C1543F;
+    --slot-blue:#3E6E85;
+    --slot-blue-bg:#E4EDF1;
+    --taken-bg:#F1E6E2;
+    --taken-ink:#A85B4B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    font-family:'Inter', sans-serif;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:28px 16px;
+    min-height:100vh;
+  }
+  .app{
+    width:100%;
+    max-width:740px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    display:flex;
+    flex-direction:column;
+    min-height:660px;
+    overflow:hidden;
+  }
+  .head{
+    background:var(--teal);
+    color:#F2F7F4;
+    padding:24px 28px 20px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+  }
+  .head-date{
+    background:#F2F7F4;
+    color:var(--teal);
+    border-radius:6px;
+    padding:6px 10px;
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    min-width:52px;
+  }
+  .head-date .dow{ font-size:9.5px; letter-spacing:0.08em; opacity:0.7; }
+  .head-date .num{ font-size:20px; font-weight:600; line-height:1; }
+  .head-title{
+    font-family:'DM Serif Display', serif;
+    font-size:23px;
+    margin:0;
+  }
+  .head-sub{
+    font-size:12.5px;
+    opacity:0.8;
+    margin-top:3px;
+  }
+  .chat{
+    flex:1;
+    padding:22px 26px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .row{ display:flex; }
+  .row.bot{ justify-content:flex-start; }
+  .row.user{ justify-content:flex-end; }
+  .bubble{
+    max-width:82%;
+    padding:12px 15px;
+    line-height:1.5;
+    font-size:14.5px;
+  }
+  .bubble.bot{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:3px 12px 12px 12px;
+  }
+  .bubble.user{
+    background:var(--teal);
+    color:#F2F7F4;
+    border-radius:12px 3px 12px 12px;
+  }
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:2px;
+  }
+  .chip{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    padding:7px 12px;
+    background:var(--slot-blue-bg);
+    color:var(--slot-blue);
+    border:1px solid var(--slot-blue);
+    border-radius:6px;
+    cursor:pointer;
+    transition:background 0.15s, color 0.15s;
+  }
+  .chip:hover{ background:var(--slot-blue); color:#fff; }
+  .chip.taken{
+    background:var(--taken-bg);
+    color:var(--taken-ink);
+    border-color:var(--taken-ink);
+    cursor:not-allowed;
+    opacity:0.65;
+    text-decoration:line-through;
+  }
+  .chip.taken:hover{ background:var(--taken-bg); color:var(--taken-ink); }
+  /* Confirmation card */
+  .confirm-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:16px 18px;
+    max-width:100%;
+  }
+  .confirm-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    border-bottom:1px dashed var(--line);
+    padding-bottom:10px;
+    margin-bottom:10px;
+  }
+  .confirm-service{
+    font-family:'DM Serif Display', serif;
+    font-size:18px;
+  }
+  .confirm-id{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--ink-light);
+  }
+  .confirm-rows div{
+    display:flex;
+    justify-content:space-between;
+    font-size:13.5px;
+    padding:4px 0;
+  }
+  .confirm-rows span:first-child{ color:var(--ink-light); }
+  .confirm-rows span:last-child{ font-weight:600; }
+  .status-badge{
+    display:inline-block;
+    margin-top:10px;
+    background:var(--slot-blue-bg);
+    color:var(--slot-blue);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    padding:3px 9px;
+    border-radius:20px;
+  }
+  .inputbar{
+    border-top:1px solid var(--line);
+    padding:14px 20px;
+    display:flex;
+    gap:10px;
+  }
+  .inputbar input{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:10px 12px;
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+    background:#fff;
+  }
+  .inputbar input:focus{ outline:2px solid var(--teal); outline-offset:-1px; }
+  .inputbar button{
+    background:var(--teal);
+    color:#F2F7F4;
+    border:none;
+    padding:0 18px;
+    border-radius:4px;
+    cursor:pointer;
+    font-size:14px;
+  }
+  .inputbar button:hover{ background:var(--coral); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="head">
+    <div class="head-date">
+      <div class="dow" id="headDow">···</div>
+      <div class="num" id="headNum">··</div>
+    </div>
+    <div>
+      <p class="head-title">SereneBot</p>
+      <p class="head-sub">appointment desk · Serene Care Clinic &amp; Salon</p>
+    </div>
+  </div>
+  <div class="chat" id="chat"></div>
+  <div class="inputbar">
+    <input id="textInput" type="text" placeholder="Type here, or use the buttons above…" autocomplete="off">
+    <button id="sendBtn">Send</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1. INTENTS & CONTEXT
+   ------------------------------------------------------------
+   Two intents are handled in this bot:
+
+     book_appointment  → context slots: { service, date, time }
+     reschedule        → context slots: { bookingId, newDate, newTime }
+
+   Context persists across turns in `session` so the bot always
+   knows what's already been collected and what's still needed —
+   this is what lets "reschedule" jump straight to asking for a
+   new date instead of restarting the whole flow.
+   ============================================================ */
+
+const SERVICES = [
+  { name:"Doctor Consultation", duration:30 },
+  { name:"Dental Checkup",      duration:30 },
+  { name:"Haircut & Styling",   duration:45 },
+  { name:"Facial Treatment",    duration:60 },
+  { name:"Spa Massage",         duration:60 }
+];
+
+const TIME_SLOTS = ["10:00 AM","11:00 AM","12:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM"];
+
+/* ============================================================
+   2. WEBHOOK / CALENDAR INTEGRATION LAYER
+   ------------------------------------------------------------
+   getAvailability() and createBooking() stand in for a webhook
+   call to Google Calendar. They're written to return the same
+   shape a real integration would, so swapping the mock for a
+   live call is a drop-in change — see the commented block below
+   each function for the real Google Calendar API v3 call.
+
+   A real deployment would also register a Calendar push
+   notification channel (events.watch) so cancellations made
+   directly in Google Calendar sync back into this bot's
+   availability automatically.
+   ============================================================ */
+
+const bookings = {}; // { "YYYY-MM-DD": { "10:00 AM": bookingObj, ... } }
+let bookingCounter = 1000;
+
+async function getAvailability(dateKey) {
+  // ---- MOCK behaviour ----
+  await new Promise(r => setTimeout(r, 250));
+  const dayBookings = bookings[dateKey] || {};
+  return TIME_SLOTS.map(slot => ({ time: slot, taken: !!dayBookings[slot] }));
+
+  /* ---- REAL GOOGLE CALENDAR API (swap-in) ----
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/PRIMARY_CALENDAR_ID/events` +
+    `?timeMin=${dateKey}T00:00:00Z&timeMax=${dateKey}T23:59:59Z&singleEvents=true`,
+    { headers: { Authorization: `Bearer ${GOOGLE_OAUTH_ACCESS_TOKEN}` } }
+  );
+  const data = await res.json();
+  const bookedTimes = data.items.map(ev => formatTime(ev.start.dateTime));
+  return TIME_SLOTS.map(slot => ({ time: slot, taken: bookedTimes.includes(slot) }));
+  */
+}
+
+async function createBooking({ service, dateKey, time, reschedule=false, oldBookingId=null }) {
+  // ---- MOCK behaviour ----
+  await new Promise(r => setTimeout(r, 300));
+  if(reschedule && oldBookingId){
+    for(const d in bookings){
+      for(const t in bookings[d]){
+        if(bookings[d][t].id === oldBookingId) delete bookings[d][t];
+      }
+    }
+  }
+  bookings[dateKey] = bookings[dateKey] || {};
+  const id = "SC-" + (bookingCounter++);
+  const record = { id, service, dateKey, time, reminderSet:true };
+  bookings[dateKey][time] = record;
+  return record;
+
+  /* ---- REAL GOOGLE CALENDAR API (swap-in) ----
+  const event = {
+    summary: `${service} — Serene Care Clinic & Salon`,
+    start: { dateTime: `${dateKey}T${to24h(time)}:00`, timeZone: "Asia/Karachi" },
+    end:   { dateTime: `${dateKey}T${to24h(addMinutes(time,30))}:00`, timeZone: "Asia/Karachi" },
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: "email", minutes: 24 * 60 },   // 1 day before
+        { method: "popup", minutes: 60 }          // 1 hour before
+      ]
+    }
+  };
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/PRIMARY_CALENDAR_ID/events`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${GOOGLE_OAUTH_ACCESS_TOKEN}`
+      },
+      body: JSON.stringify(event)
+    }
+  );
+  const created = await res.json();
+  return { id: created.id, service, dateKey, time, reminderSet: true };
+  */
+}
+
+/* ============================================================
+   3. DATE HELPERS
+   ============================================================ */
+
+function todayPlus(days){
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
+function dateKey(d){ return d.toISOString().slice(0,10); }
+function niceDate(d){
+  return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+}
+function parseUserDate(text){
+  const t = text.trim().toLowerCase();
+  if(t === "today") return todayPlus(0);
+  if(t === "tomorrow") return todayPlus(1);
+  const m = t.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+  const m2 = t.match(/(\d{1,2})[\/\-](\d{1,2})/); // DD/MM
+  if(m2){
+    const now = new Date();
+    return new Date(now.getFullYear(), Number(m2[2])-1, Number(m2[1]));
+  }
+  return null;
+}
+
+/* ============================================================
+   4. CHAT UI HELPERS
+   ============================================================ */
+
+const chatEl = document.getElementById('chat');
+const textInput = document.getElementById('textInput');
+const sendBtn = document.getElementById('sendBtn');
+
+function updateHeadDate(){
+  const d = new Date();
+  document.getElementById('headDow').textContent = d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase();
+  document.getElementById('headNum').textContent = d.getDate();
+}
+updateHeadDate();
+
+function addBotBubble(html){
+  const row = document.createElement('div');
+  row.className = 'row bot';
+  row.innerHTML = `<div class="bubble bot">${html}</div>`;
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+function addUserBubble(text){
+  const row = document.createElement('div');
+  row.className = 'row user';
+  row.innerHTML = `<div class="bubble user"></div>`;
+  row.querySelector('.bubble').textContent = text;
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+function addChips(options, onPick, taken=[]){
+  const row = document.createElement('div');
+  row.className = 'row bot';
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble bot';
+  const chips = document.createElement('div');
+  chips.className = 'chips';
+  options.forEach(opt => {
+    const c = document.createElement('div');
+    const isTaken = taken.includes(opt);
+    c.className = 'chip' + (isTaken ? ' taken' : '');
+    c.textContent = isTaken ? opt + " · booked" : opt;
+    if(!isTaken){
+      c.onclick = () => { onPick(opt); chips.querySelectorAll('.chip').forEach(x=>x.style.pointerEvents='none'); chips.style.opacity=0.55; };
+    }
+    chips.appendChild(c);
+  });
+  wrap.appendChild(chips);
+  row.appendChild(wrap);
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+function addConfirmCard(record){
+  const row = document.createElement('div');
+  row.className = 'row bot';
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble bot';
+  wrap.style.maxWidth = '100%';
+  wrap.innerHTML = `
+    <div class="confirm-card">
+      <div class="confirm-head">
+        <span class="confirm-service">${record.service}</span>
+        <span class="confirm-id">#${record.id}</span>
+      </div>
+      <div class="confirm-rows">
+        <div><span>Date</span><span>${record.dateKey}</span></div>
+        <div><span>Time</span><span>${record.time}</span></div>
+        <div><span>Location</span><span>Serene Care Clinic &amp; Salon</span></div>
+      </div>
+      <span class="status-badge">✓ Confirmed · reminder scheduled</span>
+    </div>
+  `;
+  row.appendChild(wrap);
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+/* ============================================================
+   5. CONVERSATION ENGINE
+   ============================================================ */
+
+let session = { intent:null, service:null, date:null, dateKeyStr:null, time:null, lastBookingId:null };
+let stage = "intent";
+
+function startConversation(){
+  chatEl.innerHTML = "";
+  session = { intent:null, service:null, date:null, dateKeyStr:null, time:null, lastBookingId:null };
+  addBotBubble("Hi, I'm SereneBot 🌿 I can book a new appointment or help you reschedule one. Which would you like?");
+  addChips(["Book an appointment","Reschedule existing"], (choice) => {
+    addUserBubble(choice);
+    if(choice.startsWith("Book")){
+      session.intent = "book";
+      askService();
+    } else {
+      session.intent = "reschedule";
+      askBookingId();
+    }
+  });
+  stage = "intent";
+}
+
+function askService(){
+  addBotBubble("Which service would you like to book?");
+  addChips(SERVICES.map(s=>s.name), (choice) => {
+    addUserBubble(choice);
+    session.service = choice;
+    askDate();
+  });
+  stage = "service";
+}
+
+function askBookingId(){
+  addBotBubble("Sure — what's your booking ID? (looks like SC-1000)");
+  stage = "ask_booking_id";
+}
+
+function askDate(){
+  addBotBubble("Which date works for you? Tap a quick option or type a date (e.g. 2026-10-02).");
+  addChips(["Today","Tomorrow", niceDate(todayPlus(2))], async (choice) => {
+    addUserBubble(choice);
+    const d = choice === "Today" ? todayPlus(0) : choice === "Tomorrow" ? todayPlus(1) : todayPlus(2);
+    await setDateAndAskTime(d);
+  });
+  stage = "date";
+}
+
+async function setDateAndAskTime(d){
+  session.date = d;
+  session.dateKeyStr = dateKey(d);
+  addBotBubble(`Checking availability for <strong>${niceDate(d)}</strong>…`);
+  const avail = await getAvailability(session.dateKeyStr);
+  const taken = avail.filter(a=>a.taken).map(a=>a.time);
+  addBotBubble("Here are the open slots:");
+  addChips(TIME_SLOTS, async (choice) => {
+    addUserBubble(choice);
+    session.time = choice;
+    await finalizeBooking();
+  }, taken);
+  stage = "time";
+}
+
+async function finalizeBooking(){
+  addBotBubble("Booking that in now…");
+  const record = await createBooking({
+    service: session.service,
+    dateKey: session.dateKeyStr,
+    time: session.time,
+    reschedule: session.intent === "reschedule",
+    oldBookingId: session.lastBookingId
+  });
+  addConfirmCard(record);
+  addBotBubble(`A reminder is scheduled 1 day and 1 hour before your visit. Save <strong>#${record.id}</strong> if you need to reschedule later.`);
+  addChips(["Book another","Reschedule this one","Done"], (choice) => {
+    addUserBubble(choice);
+    if(choice === "Book another") startConversation();
+    else if(choice === "Reschedule this one"){
+      session.intent = "reschedule";
+      session.lastBookingId = record.id;
+      askDate();
+    } else {
+      addBotBubble("All set — see you then! 🌿");
+    }
+  });
+  stage = "done";
+}
+
+function handleFreeText(text){
+  addUserBubble(text);
+
+  if(stage === "ask_booking_id"){
+    session.lastBookingId = text.trim().toUpperCase();
+    addBotBubble(`Got it — rebooking <strong>${session.lastBookingId}</strong>. What service is this for?`);
+    askService();
+    return;
+  }
+
+  if(stage === "date"){
+    const d = parseUserDate(text);
+    if(d){ setDateAndAskTime(d); }
+    else addBotBubble("Couldn't read that date — try \"today\", \"tomorrow\", or YYYY-MM-DD.");
+    return;
+  }
+
+  if(stage === "intent" || stage === "service" || stage === "time"){
+    addBotBubble("Please use the buttons above to continue, or type \"restart\" to start over.");
+    if(text.toLowerCase().includes("restart")) startConversation();
+    return;
+  }
+
+  addBotBubble("Type \"restart\" to book or reschedule again.");
+  if(text.toLowerCase().includes("restart")) startConversation();
+}
+
+sendBtn.onclick = () => {
+  const val = textInput.value.trim();
+  if(!val) return;
+  handleFreeText(val);
+  textInput.value = "";
+};
+textInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendBtn.click(); });
+
+startConversation();
+</script>
+</body>
+</html>
